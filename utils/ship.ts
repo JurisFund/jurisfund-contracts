@@ -7,7 +7,9 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 type Modify<T, R> = Omit<T, keyof R> & R;
 type DeployParam<T extends ContractFactory> = Parameters<InstanceType<{ new (): T }>["deploy"]>;
 type ReturnTypeIfContract<T> = T extends Contract ? T : never;
-type ContractInstance<T extends ContractFactory> = ReturnTypeIfContract<InstanceType<{ new (): T }>["connect"]>;
+type ContractInstance<T extends ContractFactory> = ReturnTypeIfContract<
+  InstanceType<{ new (): T }>["connect"]
+>;
 
 export interface Accounts {
   [name: string]: SignerWithAddress;

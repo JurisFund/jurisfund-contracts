@@ -3,15 +3,15 @@ import { deployments } from "hardhat";
 import chai from "chai";
 import { Ship, advanceTimeAndBlock, getTime } from "../utils";
 import { Lock__factory, Lock } from "../types";
-import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
+import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 
 const { expect } = chai;
 
 let ship: Ship;
 let lock: Lock;
 
-let deployer: SignerWithAddress
-let alice: SignerWithAddress
+let deployer: SignerWithAddress;
+let alice: SignerWithAddress;
 
 const setup = deployments.createFixture(async (hre) => {
   ship = await Ship.init(hre);
@@ -25,7 +25,6 @@ const setup = deployments.createFixture(async (hre) => {
   };
 });
 
-
 describe("Lock", function () {
   beforeEach(async () => {
     const scaffold = await setup();
@@ -35,7 +34,6 @@ describe("Lock", function () {
 
     lock = await ship.connect(Lock__factory);
   });
-
 
   describe("Deployment", function () {
     it("Should set the right owner", async function () {
@@ -51,11 +49,13 @@ describe("Lock", function () {
     it("Should fail if the unlockTime is not in the future", async function () {
       // We don't use the fixture here because we want a different deployment
       const latestTime = await getTime();
-    
-      await expect(ship.deploy(Lock__factory, {
-        args: [latestTime], value: "1" })).to.be.revertedWith(
-        "Unlock time should be in the future",
-      );
+
+      await expect(
+        ship.deploy(Lock__factory, {
+          args: [latestTime],
+          value: "1",
+        }),
+      ).to.be.revertedWith("Unlock time should be in the future");
     });
   });
 
@@ -91,7 +91,7 @@ describe("Lock", function () {
       it("Should emit an event on withdrawals", async function () {
         const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
         const ONE_GWEI = 1_000_000_000n;
-      
+
         const unlockTime = (await getTime()) + ONE_YEAR_IN_SECS;
         await advanceTimeAndBlock(unlockTime);
 
@@ -103,7 +103,7 @@ describe("Lock", function () {
       it("Should transfer the funds to the owner", async function () {
         const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
         const ONE_GWEI = 1_000_000_000n;
-      
+
         const unlockTime = (await getTime()) + ONE_YEAR_IN_SECS;
         await advanceTimeAndBlock(unlockTime);
 

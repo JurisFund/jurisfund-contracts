@@ -3,7 +3,7 @@ import { node_url, accounts, verifyKey } from "./utils/network";
 import { removeConsoleLog } from "hardhat-preprocessor";
 
 import "@nomicfoundation/hardhat-chai-matchers";
-import '@nomicfoundation/hardhat-ethers';
+import "@nomicfoundation/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-solhint";
 import "@typechain/hardhat";
@@ -11,7 +11,7 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "hardhat-abi-exporter";
 import "hardhat-deploy";
-import 'hardhat-deploy-ethers';
+import "hardhat-deploy-ethers";
 import "hardhat-watcher";
 import "hardhat-storage-layout";
 import "dotenv/config";
