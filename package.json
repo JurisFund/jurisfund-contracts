@@ -37,9 +37,8 @@
     "clean": "rimraf abis artifacts cache types",
     "postinstall": "npm-run-all husky:init husky:add",
     "husky:init": "husky install",
-    "husky:add": "npx husky set .husky/pre-commit \"npx husky-commit\" && npx husky set .husky/pre-push \"npx husky-push\"",
+    "husky:add": "npx husky set .husky/pre-commit \"npx lint-staged\"",
     "husky-commit": "lint-staged",
-    "husky-push": "npx lint:fix",
     "prepare": "husky install"
   },
   "lint-staged": {
