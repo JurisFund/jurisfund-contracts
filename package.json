@@ -45,6 +45,11 @@
       "prettier --write"
     ]
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint:check"
+    }
+  },
   "dependencies": {
     "dotenv": "^16.3.1",
     "hardhat": "^2.19.1",
