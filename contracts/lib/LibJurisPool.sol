@@ -9,6 +9,7 @@ library LibJurisPool {
     uint256 _totalStakedAmount; // total staked amount
     uint256 _fullPeriod; // full stack period
     uint256 _minStakeAmount; // minimal stack amount
+    uint256 _liquidity;
     mapping(bytes32 => StakeData) _stakes; // staking data
   }
 

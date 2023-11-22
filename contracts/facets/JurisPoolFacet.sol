@@ -1,58 +1,91 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC20Upgradeable, IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {LibJurisPool, StakeData} from "../lib/LibJurisPool.sol";
 
-contract JurisPoolFacet is ERC20Upgradeable, ReentrancyGuardUpgradeable {
-  event NewStake(
+contract JurisPoolFacet is ReentrancyGuardUpgradeable {
+  event Staked(
     bytes32 indexed key,
     address indexed owner,
     uint256 amount,
     uint256 unlockTime,
-    uint256 mintAmount
+    uint256 liquidity
   );
-  event NewUnstake(
+  event Withdrawal(
     bytes32 indexed key,
     address indexed owner,
     uint256 amount,
     uint256 rewardAmount
   );
 
+  error InvalidStakeAmount();
+  error Forbidden(address owner);
+  error AlreadyWithdrawn();
+  error Locked(uint256 unlockTime);
+
   function stake(bool _useHalfStake, uint256 _amount) external nonReentrant {
     LibJurisPool.PoolStorage storage ps = LibJurisPool._getPoolStorage();
-    require(_amount > ps._minStakeAmount, "JurisPool: stake amount is too small");
+    if (_amount < ps._minStakeAmount) {
+      revert InvalidStakeAmount();
+    }
 
     uint256 unlockTime = block.timestamp + (_useHalfStake ? ps._fullPeriod / 2 : ps._fullPeriod);
 
-    uint256 mintAmount = _amount;
+    uint256 liquidity = _amount;
     if (ps._totalStakedAmount > 0) {
-      mintAmount = (totalSupply() * _amount) / ps._totalStakedAmount;
+      liquidity = (ps._liquidity * _amount) / ps._totalStakedAmount;
     }
     bytes32 key = keccak256(abi.encodePacked(msg.sender, _amount, unlockTime));
-    ps._stakes[key] = StakeData(unlockTime, _amount, mintAmount, msg.sender, false);
+    ps._stakes[key] = StakeData(unlockTime, _amount, liquidity, msg.sender, false);
     ps._totalStakedAmount += _amount;
+    ps._liquidity += liquidity;
 
-    _mint(msg.sender, mintAmount);
     IERC20(ps._token).transferFrom(msg.sender, address(this), _amount);
 
-    emit NewStake(key, msg.sender, _amount, unlockTime, mintAmount);
+    emit Staked(key, msg.sender, _amount, unlockTime, liquidity);
   }
 
   function unStake(bytes32 _key) external nonReentrant {
     LibJurisPool.PoolStorage storage ps = LibJurisPool._getPoolStorage();
     StakeData storage data = ps._stakes[_key];
-    require(!data.finished, "JurisPool: already unStaked!");
-    require(data.owner == msg.sender, "JurisPool: you are not owner of this stake");
+    if (data.finished) {
+      revert AlreadyWithdrawn();
+    }
+    if (data.owner != msg.sender) {
+      revert Forbidden(data.owner);
+    }
+    if (block.timestamp < data.unlockTime) {
+      revert Locked(data.unlockTime);
+    }
 
     data.finished = true;
-    uint256 rewardAmount = (data.tokenAmount * ps._totalStakedAmount) / totalSupply();
+    uint256 rewardAmount = (data.liquidity * ps._totalStakedAmount) / ps._liquidity;
     ps._totalStakedAmount -= rewardAmount;
+    ps._liquidity -= data.liquidity;
 
-    _burn(msg.sender, data.tokenAmount);
     IERC20(ps._token).transfer(msg.sender, rewardAmount);
 
-    emit NewUnstake(_key, msg.sender, data.amount, rewardAmount);
+    emit Withdrawal(_key, msg.sender, data.amount, rewardAmount);
+  }
+
+  function getStake(bytes32 key) external view returns (StakeData memory stakeData) {
+    stakeData = LibJurisPool._getPoolStorage()._stakes[key];
+  }
+
+  function getPoolState() external view returns (uint256 stakedAmount, uint256 liquidity) {
+    stakedAmount = LibJurisPool._getPoolStorage()._totalStakedAmount;
+    liquidity = LibJurisPool._getPoolStorage()._liquidity;
+  }
+
+  function getPoolConfig()
+    external
+    view
+    returns (address token, uint256 fullPeriod, uint256 minStakeAmount)
+  {
+    token = LibJurisPool._getPoolStorage()._token;
+    fullPeriod = LibJurisPool._getPoolStorage()._fullPeriod;
+    minStakeAmount = LibJurisPool._getPoolStorage()._minStakeAmount;
   }
 }

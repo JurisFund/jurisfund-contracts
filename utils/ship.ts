@@ -7,9 +7,9 @@ import { LibDiamond__factory } from "../types";
 
 type Modify<T, R> = Omit<T, keyof R> & R;
 type DeployParam<T extends ContractFactory> = Parameters<InstanceType<{ new (): T }>["deploy"]>;
-type ReturnTypeIfContract<T> = T extends Contract ? T : Contract;
+type ReturnTypeIfContract<T> = T extends Contract ? T : never;
 type ContractInstance<T extends ContractFactory> = ReturnTypeIfContract<
-  InstanceType<{ new (): T }>["connect"]
+  InstanceType<{ new (): T }>["attach"]
 >;
 
 export interface Accounts {
@@ -114,7 +114,7 @@ class Ship {
     facets: (new () => ContractFactory)[],
     initializer: new () => ContractFactory,
     initializeFunction: string,
-    args?: any[],
+    args?: (string | number | bigint | boolean)[],
     option?: Modify<
       DiamondOptions,
       {

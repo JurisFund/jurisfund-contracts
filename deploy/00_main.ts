@@ -12,7 +12,7 @@ const func: DeployFunction = async (hre) => {
     [InitFacet__factory, JurisPoolFacet__factory],
     InitFacet__factory,
     "init",
-    [jusdc.address, 2 * 356 * 24 * 3600, 10000000n],
+    [jusdc.address, 2 * 365 * 24 * 3600, 10000000n],
   );
 };
 

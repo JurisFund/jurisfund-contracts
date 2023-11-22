@@ -8,7 +8,6 @@ import {IDiamondCut} from "hardhat-deploy/solc_0.8/diamond/interfaces/IDiamondCu
 import {IDiamondLoupe} from "hardhat-deploy/solc_0.8/diamond/interfaces/IDiamondLoupe.sol";
 import {IERC173} from "hardhat-deploy/solc_0.8/diamond/interfaces/IERC173.sol";
 import {LibJurisPool} from "../lib/LibJurisPool.sol";
-import {LibERC20} from "../lib/LibERC20.sol";
 
 contract InitFacet is UsingDiamondOwner, Initializable {
   function ds() internal pure returns (LibDiamond.DiamondStorage storage) {
@@ -19,18 +18,11 @@ contract InitFacet is UsingDiamondOwner, Initializable {
     return LibJurisPool._getPoolStorage();
   }
 
-  function ts() internal pure returns (LibERC20.ERC20Storage storage) {
-    return LibERC20._getERC20Storage();
-  }
-
   function init(
     address _token,
     uint256 _fullPeriod,
     uint256 _minStakeAmount
   ) external onlyOwner initializer {
-    ts()._name = "Juris Pool Liquidity";
-    ts()._symbol = "JPL";
-
     ps()._token = _token;
     ps()._fullPeriod = _fullPeriod;
     ps()._minStakeAmount = _minStakeAmount;
