@@ -1,7 +1,5 @@
 {
-  "plugins": [
-    "prettier-plugin-solidity"
-  ],
+  "plugins": ["prettier-plugin-solidity"],
   "printWidth": 110,
   "tabWidth": 2,
   "trailingComma": "all",

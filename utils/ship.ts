@@ -1,12 +1,13 @@
 import hardhatRuntimeEnvironment, { ethers } from "hardhat";
 import { Contract, ContractFactory } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { DeployOptions } from "hardhat-deploy/types";
+import { DeployOptions, DiamondOptions } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import { LibDiamond__factory } from "../types";
 
 type Modify<T, R> = Omit<T, keyof R> & R;
 type DeployParam<T extends ContractFactory> = Parameters<InstanceType<{ new (): T }>["deploy"]>;
-type ReturnTypeIfContract<T> = T extends Contract ? T : never;
+type ReturnTypeIfContract<T> = T extends Contract ? T : Contract;
 type ContractInstance<T extends ContractFactory> = ReturnTypeIfContract<
   InstanceType<{ new (): T }>["connect"]
 >;
@@ -108,12 +109,60 @@ class Ship {
     };
   };
 
+  deployDiamond = async (
+    name: string,
+    facets: (new () => ContractFactory)[],
+    initializer: new () => ContractFactory,
+    initializeFunction: string,
+    args?: any[],
+    option?: Modify<
+      DiamondOptions,
+      {
+        from?: SignerWithAddress;
+        log?: boolean;
+      }
+    >,
+  ) => {
+    const facetNames = facets.map((facet) => facet.name.split("__")[0]);
+    const initializerName = initializer.name.split("__")[0];
+
+    const from = option?.from || this.accounts.deployer;
+    const fromAddr = from.address;
+
+    let log = option?.log || this.log;
+    if (log === undefined) {
+      if (this.hre.network.name !== "hardhat") {
+        log = true;
+      } else {
+        log = false;
+      }
+    }
+
+    const deployResult = await this.hre.deployments.diamond.deploy(name, {
+      ...option,
+      facets: facetNames,
+      execute: {
+        contract: initializerName,
+        methodName: initializeFunction,
+        args: args ?? [],
+      },
+      from: fromAddr,
+      log,
+      waitConfirmations: 1,
+    });
+
+    return {
+      ...deployResult,
+    };
+  };
+
   connect = async <T extends ContractFactory>(
     contractFactory: (new () => T) | string,
     newAddress?: string,
   ): Promise<ContractInstance<T>> => {
     const contractName =
       typeof contractFactory == "string" ? contractFactory : contractFactory.name.split("__")[0];
+
     if (newAddress) {
       const factory = (await ethers.getContractFactory(contractName, this.accounts.deployer)) as T;
       return factory.attach(newAddress) as ContractInstance<T>;
