@@ -14,7 +14,7 @@ error UnableToSettle(string reason);
 error NotEnoughFunds(uint256 balance, uint256 required);
 error Exception(string errorMessage);
 
-contract Escrow {
+contract JusrisEscrow {
   // required for proxy storage
   address internal immutable self = address(this);
 
@@ -95,8 +95,7 @@ contract Escrow {
 
   function updateEscrowData(
     address settlementToken,
-    uint256 jurisFundFeePercentage,
-    address jurisFundPool
+    uint256 jurisFundFeePercentage
   ) external Initialized JurisFundSafeOrPool {
     if (settlementToken != address(0)) {
       uint8 decimals = IERC20Metadata(settlementToken).decimals();
@@ -106,10 +105,6 @@ contract Escrow {
 
     if (jurisFundFeePercentage > 0) {
       escrowData.jurisFundFeePercentage = _enforcePrecision(jurisFundFeePercentage);
-    }
-
-    if (jurisFundPool != address(0)) {
-      escrowData.jurisFundPool = jurisFundPool;
     }
   }
 
