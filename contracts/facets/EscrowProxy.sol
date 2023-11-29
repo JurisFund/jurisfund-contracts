@@ -3,10 +3,6 @@ pragma solidity ^0.8.20;
 
 error InvalidImplementationAddress();
 
-interface IJusrisEscrow {
-  function escrowAddress() external view returns (address);
-}
-
 /// adapted from https://github.com/safe-global/safe-contracts/blob/main/contracts/proxies/SafeProxy.sol
 contract JusrisEscrowProxy {
   address internal immutable _IMPLEMENTATION_SLOT;

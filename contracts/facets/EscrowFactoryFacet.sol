@@ -6,7 +6,7 @@ import {JusrisEscrowProxy} from "./EscrowProxy.sol";
 /// adapted from:
 /// - openzeppelin Creat2 lib
 /// - safe-protocol proxy Factory
-contract EscrowManagerFacet {
+contract JurisEscrowFactoryFacet {
   event EscrowCreated(JusrisEscrowProxy indexed proxy, address implementation);
 
   function escrowCreationCode() public pure returns (bytes memory) {
