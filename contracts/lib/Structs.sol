@@ -8,3 +8,19 @@ struct StakeData {
   address owner; // address of owner
   bool finished; // this value is true after user unstake
 }
+
+enum EscrowState {
+  Created,
+  Pending,
+  Finished
+}
+
+struct EscrowAccount {
+  EscrowState status;
+  address borrower;
+  address lawyer;
+  uint128 amount;
+  uint128 interest;
+  uint128 borrowedAt;
+  uint128 payoffAt;
+}

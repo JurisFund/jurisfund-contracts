@@ -75,7 +75,9 @@ describe("JurisPool test", function () {
       .to.be.emit(usdc, "Transfer")
       .withArgs(alice.address, pool.target, 10_000_000n)
       .emit(pool, "Staked")
-      .withArgs(getKey, alice.address, 10_000_000n, getTimestamp, 10_000_000n);
+      .withArgs(getKey, alice.address, 10_000_000n, getTimestamp, 10_000_000n)
+      .emit(pool, "RateUpdated")
+      .withArgs(10_000_000n, 10_000_000n);
 
     const poolState = await pool.getPoolState();
 
@@ -101,7 +103,9 @@ describe("JurisPool test", function () {
       .to.emit(usdc, "Transfer")
       .withArgs(pool.target, alice.address, 10_000_000n)
       .emit(pool, "Withdrawal")
-      .withArgs(key, alice.address, 10_000_000n, 10_000_000n);
+      .withArgs(key, alice.address, 10_000_000n, 10_000_000n)
+      .emit(pool, "RateUpdated")
+      .withArgs(0n, 0n);
 
     const poolState = await pool.getPoolState();
 
