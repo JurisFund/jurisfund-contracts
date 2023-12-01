@@ -3,9 +3,10 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {LibJurisPool, StakeData} from "../lib/LibJurisPool.sol";
+import {LibJuris, StakeData} from "../lib/LibJuris.sol";
+import {UsingDiamondOwner} from "hardhat-deploy/solc_0.8/diamond/UsingDiamondOwner.sol";
 
-contract JurisPoolFacet is ReentrancyGuardUpgradeable {
+contract JurisPoolFacet is ReentrancyGuardUpgradeable, UsingDiamondOwner {
   event Staked(
     bytes32 indexed key,
     address indexed owner,
@@ -19,6 +20,7 @@ contract JurisPoolFacet is ReentrancyGuardUpgradeable {
     uint256 amount,
     uint256 rewardAmount
   );
+  event RateUpdated(uint256 liquidity, uint256 stakeAmount);
 
   error InvalidStakeAmount();
   error Forbidden(address owner);
@@ -26,7 +28,7 @@ contract JurisPoolFacet is ReentrancyGuardUpgradeable {
   error Locked(uint256 unlockTime);
 
   function stake(bool _useHalfStake, uint256 _amount) external nonReentrant {
-    LibJurisPool.PoolStorage storage ps = LibJurisPool._getPoolStorage();
+    LibJuris.PoolStorage storage ps = LibJuris._getPoolStorage();
     if (_amount < ps._minStakeAmount) {
       revert InvalidStakeAmount();
     }
@@ -45,10 +47,11 @@ contract JurisPoolFacet is ReentrancyGuardUpgradeable {
     IERC20(ps._token).transferFrom(msg.sender, address(this), _amount);
 
     emit Staked(key, msg.sender, _amount, unlockTime, liquidity);
+    emit RateUpdated(ps._liquidity, ps._totalStakedAmount);
   }
 
   function unStake(bytes32 _key) external nonReentrant {
-    LibJurisPool.PoolStorage storage ps = LibJurisPool._getPoolStorage();
+    LibJuris.PoolStorage storage ps = LibJuris._getPoolStorage();
     StakeData storage data = ps._stakes[_key];
     if (data.finished) {
       revert AlreadyWithdrawn();
@@ -67,16 +70,23 @@ contract JurisPoolFacet is ReentrancyGuardUpgradeable {
 
     IERC20(ps._token).transfer(msg.sender, rewardAmount);
 
+    emit RateUpdated(ps._liquidity, ps._totalStakedAmount);
     emit Withdrawal(_key, msg.sender, data.amount, rewardAmount);
   }
 
+  function updateConfig(uint256 _fullPeriod, uint256 _minStakeAmount) external onlyOwner {
+    LibJuris.PoolStorage storage ps = LibJuris._getPoolStorage();
+    ps._fullPeriod = _fullPeriod;
+    ps._minStakeAmount = _minStakeAmount;
+  }
+
   function getStake(bytes32 key) external view returns (StakeData memory stakeData) {
-    stakeData = LibJurisPool._getPoolStorage()._stakes[key];
+    stakeData = LibJuris._getPoolStorage()._stakes[key];
   }
 
   function getPoolState() external view returns (uint256 stakedAmount, uint256 liquidity) {
-    stakedAmount = LibJurisPool._getPoolStorage()._totalStakedAmount;
-    liquidity = LibJurisPool._getPoolStorage()._liquidity;
+    stakedAmount = LibJuris._getPoolStorage()._totalStakedAmount;
+    liquidity = LibJuris._getPoolStorage()._liquidity;
   }
 
   function getPoolConfig()
@@ -84,8 +94,8 @@ contract JurisPoolFacet is ReentrancyGuardUpgradeable {
     view
     returns (address token, uint256 fullPeriod, uint256 minStakeAmount)
   {
-    token = LibJurisPool._getPoolStorage()._token;
-    fullPeriod = LibJurisPool._getPoolStorage()._fullPeriod;
-    minStakeAmount = LibJurisPool._getPoolStorage()._minStakeAmount;
+    token = LibJuris._getPoolStorage()._token;
+    fullPeriod = LibJuris._getPoolStorage()._fullPeriod;
+    minStakeAmount = LibJuris._getPoolStorage()._minStakeAmount;
   }
 }
