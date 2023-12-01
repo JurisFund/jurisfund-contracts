@@ -5,6 +5,7 @@ library LibJurisEscrow {
   struct EscrowStorage {
     uint256 _upkeepInterval;
     uint256 _lastUpkeep;
+    address _escrowImplementation;
     address[] _escrowProxies;
     mapping(address => bool) _escrowSettled;
   }

@@ -38,12 +38,12 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
     return type(JusrisEscrowProxy).creationCode;
   }
 
-  function preCalculateEscrowAddress(
-    address implementation,
-    bytes32 salt
-  ) public view returns (address addr) {
+  function preCalculateEscrowAddress(bytes32 salt) public view returns (address addr) {
     bytes32 bytecodeHash = keccak256(
-      abi.encodePacked(type(JusrisEscrowProxy).creationCode, uint256(uint160(implementation)))
+      abi.encodePacked(
+        type(JusrisEscrowProxy).creationCode,
+        uint256(uint160(LibJurisEscrow._getEscrowStorage()._escrowImplementation))
+      )
     );
 
     assembly {
@@ -58,15 +58,15 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
   }
 
   function deployEscrow(
-    address implementation,
     bytes memory initializer,
     bytes32 salt
   ) external nonReentrant returns (JusrisEscrowProxy proxy) {
+    LibJurisEscrow.EscrowStorage storage es = LibJurisEscrow._getEscrowStorage();
+    address implementation = es._escrowImplementation;
     bytes memory deploymentData = abi.encodePacked(
       type(JusrisEscrowProxy).creationCode,
       uint256(uint160(implementation))
     );
-    LibJurisEscrow.EscrowStorage storage es = LibJurisEscrow._getEscrowStorage();
     /* solhint-disable no-inline-assembly */
     /// @solidity memory-safe-assembly
     assembly {

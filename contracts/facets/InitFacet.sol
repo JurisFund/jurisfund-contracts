@@ -24,12 +24,13 @@ contract InitFacet is UsingDiamondOwner, Initializable {
   }
 
   function init(
-    // address _signer,
     address _token,
     uint256 _fullPeriod,
-    uint256 _minStakeAmount
+    uint256 _minStakeAmount,
+    address _escrowImplementation
   ) external onlyOwner initializer {
     es()._upkeepInterval = 2600; // an hour
+    es()._escrowImplementation = _escrowImplementation;
 
     ps()._token = _token;
     ps()._fullPeriod = _fullPeriod;
