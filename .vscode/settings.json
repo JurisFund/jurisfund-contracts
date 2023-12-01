@@ -1,4 +1,5 @@
 {
   "cSpell.words": ["Juris", "JUSDC", "nomicfoundation", "nomiclabs", "sepolia", "solhint", "typechain"],
-  "solidity.compileUsingRemoteVersion": "v0.8.20+commit.7dd6d404"
+  "solidity.compileUsingRemoteVersion": "v0.8.20+commit.7dd6d404",
+  "editor.inlineSuggest.showToolbar": "onHover"
 }
