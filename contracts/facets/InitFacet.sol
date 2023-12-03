@@ -8,6 +8,7 @@ import {IDiamondCut} from "hardhat-deploy/solc_0.8/diamond/interfaces/IDiamondCu
 import {IDiamondLoupe} from "hardhat-deploy/solc_0.8/diamond/interfaces/IDiamondLoupe.sol";
 import {IERC173} from "hardhat-deploy/solc_0.8/diamond/interfaces/IERC173.sol";
 import {LibJuris} from "../lib/LibJuris.sol";
+import {LibJurisEscrow} from "../lib/LibJurisEscrow.sol";
 
 contract InitFacet is UsingDiamondOwner, Initializable {
   function ds() internal pure returns (LibDiamond.DiamondStorage storage) {
@@ -18,17 +19,18 @@ contract InitFacet is UsingDiamondOwner, Initializable {
     return LibJuris._getPoolStorage();
   }
 
-  // function es() internal pure returns (LibJuris.EscrowStorage storage) {
-  //   return LibJuris._getEscrowStorage();
-  // }
+  function es() internal pure returns (LibJurisEscrow.EscrowStorage storage) {
+    return LibJurisEscrow._getEscrowStorage();
+  }
 
   function init(
-    // address _signer,
     address _token,
     uint256 _fullPeriod,
-    uint256 _minStakeAmount
+    uint256 _minStakeAmount,
+    address _escrowImplementation
   ) external onlyOwner initializer {
-    // es()._signer = _signer;
+    es()._upkeepInterval = 2600; // an hour
+    es()._escrowImplementation = _escrowImplementation;
 
     ps()._token = _token;
     ps()._fullPeriod = _fullPeriod;

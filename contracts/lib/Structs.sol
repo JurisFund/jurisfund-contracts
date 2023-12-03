@@ -13,14 +13,13 @@ struct StakeData {
 
 struct EscrowData {
   uint128 startTime; // time escrow was created
-  uint128 jurisFundFeePercentage; // compounded interest for loan duration %
+  uint112 jurisFundFeePercentage; // compounded interest for loan duration %
+  uint8 initialized; // 0 or 1
+  uint8 isSettled; // 0 or 1
   uint256 principal; // initial loan amount USD
+  IERC20 settlementToken; // JUSDC loan token
   address plantiff; // address of plantiff for injury case
   address plantiffLawer; // address of plantiff lawyer
-  address jurisFundPool; // address of Juris Diamond
-  IERC20 settlementToken; // JUSDC loan token
+  address jurisFund; // address of Juris Diamond
   address jurisFundSafe; // address of juris safe multisig
-  bool initialized; // escrow can only be initialized once
-  bool isSettled; // escrow can only be settled once
-  bool locked; // escrow can only be unlocked by plantiff and lawyer if locked
 }

@@ -1,24 +1,49 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {JusrisEscrowProxy} from "./EscrowProxy.sol";
+import {JurisEscrowProxy} from "./EscrowProxy.sol";
+import {IJurisEscrowProxy} from "../interfaces/IJurisEscrowProxy.sol";
+import {LibJurisEscrow} from "../lib/LibJurisEscrow.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /// adapted from:
 /// - openzeppelin Creat2 lib
 /// - safe-protocol proxy Factory
-contract JurisEscrowFactoryFacet {
-  event EscrowCreated(JusrisEscrowProxy indexed proxy, address implementation);
+contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGuardUpgradeable {
+  event EscrowCreated(JurisEscrowProxy indexed proxy, address implementation);
 
-  function escrowCreationCode() public pure returns (bytes memory) {
-    return type(JusrisEscrowProxy).creationCode;
+  function checkUpkeep(
+    bytes calldata /* checkData */
+  ) external view override returns (bool upkeepNeeded, bytes memory performData) {
+    LibJurisEscrow.EscrowStorage storage es = LibJurisEscrow._getEscrowStorage();
+    upkeepNeeded = (block.timestamp - es._lastUpkeep) > es._upkeepInterval;
+    performData = new bytes(0);
   }
 
-  function preCalculateEscrowAddress(
-    address implementation,
-    bytes32 salt
-  ) public view returns (address addr) {
+  function performUpkeep(bytes calldata /* performData */) external override nonReentrant {
+    LibJurisEscrow.EscrowStorage storage es = LibJurisEscrow._getEscrowStorage();
+    if ((block.timestamp - es._lastUpkeep) > es._upkeepInterval) {
+      es._lastUpkeep = block.timestamp;
+    }
+    address[] memory proxies = es._escrowProxies;
+    for (uint i = 0; i < proxies.length; i++) {
+      if (!es._escrowSettled[proxies[i]]) {
+        _trySettle(proxies[i]) == 1 ? es._escrowSettled[proxies[i]] = true : false;
+      }
+    }
+  }
+
+  function escrowCreationCode() public pure returns (bytes memory) {
+    return type(JurisEscrowProxy).creationCode;
+  }
+
+  function preCalculateEscrowAddress(bytes32 salt) public view returns (address addr) {
     bytes32 bytecodeHash = keccak256(
-      abi.encodePacked(type(JusrisEscrowProxy).creationCode, uint256(uint160(implementation)))
+      abi.encodePacked(
+        type(JurisEscrowProxy).creationCode,
+        uint256(uint160(LibJurisEscrow._getEscrowStorage()._escrowImplementation))
+      )
     );
 
     assembly {
@@ -33,12 +58,13 @@ contract JurisEscrowFactoryFacet {
   }
 
   function deployEscrow(
-    address implementation,
     bytes memory initializer,
     bytes32 salt
-  ) external returns (JusrisEscrowProxy proxy) {
+  ) external nonReentrant returns (JurisEscrowProxy proxy) {
+    LibJurisEscrow.EscrowStorage storage es = LibJurisEscrow._getEscrowStorage();
+    address implementation = es._escrowImplementation;
     bytes memory deploymentData = abi.encodePacked(
-      type(JusrisEscrowProxy).creationCode,
+      type(JurisEscrowProxy).creationCode,
       uint256(uint160(implementation))
     );
     /* solhint-disable no-inline-assembly */
@@ -57,6 +83,20 @@ contract JurisEscrowFactoryFacet {
       }
     }
 
+    es._escrowSettled[address(proxy)] = false;
+    es._escrowProxies.push(address(proxy));
+
     emit EscrowCreated(proxy, implementation);
+  }
+
+  function _trySettle(address proxy) internal returns (uint256) {
+    if (IJurisEscrowProxy(proxy).ready()) {
+      try IJurisEscrowProxy(proxy).disburse() {
+        return 1;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
   }
 }
