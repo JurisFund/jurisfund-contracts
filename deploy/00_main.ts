@@ -5,6 +5,7 @@ import {
   JUSDC__factory,
   JurisEscrowFactoryFacet__factory,
   JurisPoolFacet__factory,
+  JurisEscrow__factory,
 } from "../types";
 
 const func: DeployFunction = async (hre) => {
@@ -12,12 +13,14 @@ const func: DeployFunction = async (hre) => {
 
   const jusdc = await deploy(JUSDC__factory);
 
+  const escrowImplementation = await deploy(JurisEscrow__factory);
+
   await deployDiamond(
     "JurisFund",
     [InitFacet__factory, JurisPoolFacet__factory, JurisEscrowFactoryFacet__factory],
     InitFacet__factory,
     "init",
-    [jusdc.address, 2 * 365 * 24 * 3600, 10000000n],
+    [jusdc.address, 2 * 365 * 24 * 3600, 10000000n, escrowImplementation.address],
   );
 };
 
