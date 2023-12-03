@@ -82,6 +82,7 @@ const config: HardhatUserConfig = {
     signer: 1,
     alice: 2,
     bob: 3,
+    safe: 4,
   },
   abiExporter: {
     path: "./abis",
