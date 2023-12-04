@@ -24,7 +24,7 @@ error Exception(uint256 errorCode);
 
 contract JusrisEscrow {
   // required for proxy storage
-  address internal immutable self = address(this);
+  address internal _IMPLEMENTATION_SLOT;
 
   using SafeERC20 for IERC20;
   using Math for uint256;
@@ -74,7 +74,7 @@ contract JusrisEscrow {
 
   /// returns JUSDC balance of the escrow
   function getBalance() public view returns (uint256) {
-    return escrowData.settlementToken.balanceOf(self);
+    return escrowData.settlementToken.balanceOf(address(this));
   }
 
   /// enforces one time deposit checks
@@ -109,7 +109,7 @@ contract JusrisEscrow {
     uint256 etherBalance = address(this).balance;
     if (etherBalance > 0) payable(safe).call{value: etherBalance}("");
 
-    uint256 tokenBalance = token.balanceOf(self);
+    uint256 tokenBalance = token.balanceOf(address(this));
     if (tokenBalance > 0) token.safeTransfer(safe, tokenBalance);
   }
 
@@ -119,14 +119,14 @@ contract JusrisEscrow {
 
     if (amount < minDeposit) revert NotEnoughFunds(amount, minDeposit);
 
-    settlementToken.safeTransferFrom(msg.sender, self, amount);
+    settlementToken.safeTransferFrom(msg.sender, address(this), amount);
   }
 
   function _disburse(uint256 precalculatedDebt) internal {
     EscrowData memory m_escrowData = escrowData;
 
     IERC20 settlementToken = m_escrowData.settlementToken;
-    uint256 settlement = settlementToken.balanceOf(self);
+    uint256 settlement = settlementToken.balanceOf(address(this));
 
     _requiresCanBeSettled(settlement, m_escrowData.principal * 10 + MARKUP, m_escrowData.isSettled);
 

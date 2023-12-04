@@ -1,10 +1,8 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { deployments } from "hardhat";
 import chai from "chai";
-import { Ship, advanceTimeAndBlock } from "../utils";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+import { deployments, ethers } from "hardhat";
 import { JUSDC, JUSDC__factory, JusrisEscrow, JusrisEscrow__factory } from "../types";
-import { ethers } from "hardhat";
+import { Ship, advanceTimeAndBlock } from "../utils";
 
 const { expect } = chai;
 
@@ -30,7 +28,7 @@ const setup = deployments.createFixture(async (hre) => {
   };
 });
 
-describe("JurisEscrow implementation", function () {
+describe("JurisEscrow implementation test", function () {
   let key: string;
   let timestamp: bigint;
 
@@ -133,9 +131,9 @@ describe("JurisEscrow implementation", function () {
     await escrowProxy.connect(deployer).disburse();
     expect(await usdc.balanceOf(escrowProxy.target)).to.be.equal(0);
     expect(await usdc.balanceOf(lawer.address)).to.be.equal(settlement30);
-    expect(await usdc.balanceOf(deployer.address)).to.be.equal(11065151827n);
-    expect(await usdc.balanceOf(safe.address)).to.be.equal(347221190);
-    expect(await usdc.balanceOf(plantiff.address)).to.be.equal(58591126983);
+    expect(await usdc.balanceOf(deployer.address)).to.be.equal(debt - debt3);
+    expect(await usdc.balanceOf(safe.address)).to.be.equal(debt3 + markup);
+    expect(await usdc.balanceOf(plantiff.address)).to.be.equal(settlement - debt - markup - settlement30);
   });
 
   it("cannot disburse if duration is not greater than 24hours", async () => {
