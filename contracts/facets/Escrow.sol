@@ -22,7 +22,7 @@ error NotEnoughFunds(uint256 actual, uint256 expected);
 /// ---------------------------------------------------
 error Exception(uint256 errorCode);
 
-contract JusrisEscrow {
+contract JurisEscrow {
   // required for proxy storage
   address internal _IMPLEMENTATION_SLOT;
 

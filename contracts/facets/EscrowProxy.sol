@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 error InvalidImplementationAddress();
 
 /// adapted from https://github.com/safe-global/safe-contracts/blob/main/contracts/proxies/SafeProxy.sol
-contract JusrisEscrowProxy {
+contract JurisEscrowProxy {
   address internal _IMPLEMENTATION_SLOT;
 
   constructor(address _implementation) {

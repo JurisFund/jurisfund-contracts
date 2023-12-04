@@ -8,9 +8,9 @@ import {
   JUSDC__factory,
   JurisEscrowFactoryFacet,
   JurisEscrowFactoryFacet__factory,
-  JusrisEscrow,
-  JusrisEscrowProxy__factory,
-  JusrisEscrow__factory,
+  JurisEscrow,
+  JurisEscrowProxy__factory,
+  JurisEscrow__factory,
 } from "../types";
 import { Ship, advanceTimeAndBlock } from "../utils";
 
@@ -18,7 +18,7 @@ const { expect } = chai;
 
 let ship: Ship;
 let escrowFactory: JurisEscrowFactoryFacet;
-let escrowImpl: JusrisEscrow;
+let escrowImpl: JurisEscrow;
 let usdc: JUSDC;
 
 let deployer: SignerWithAddress;
@@ -69,7 +69,7 @@ describe("JurisEscrow factory test", function () {
     plantiff = scaffold.accounts.alice;
     lawer = scaffold.accounts.bob;
 
-    escrowImpl = await ship.connect(JusrisEscrow__factory);
+    escrowImpl = await ship.connect(JurisEscrow__factory);
     usdc = await ship.connect(JUSDC__factory);
     const diamond = await ship.connect("JurisFund");
     escrowFactory = JurisEscrowFactoryFacet__factory.connect(
@@ -130,7 +130,7 @@ describe("JurisEscrow factory test", function () {
   it("returns escrow creation code", async () => {
     const code = await escrowFactory.escrowCreationCode();
 
-    expect(code).to.equal(JusrisEscrowProxy__factory.bytecode);
+    expect(code).to.equal(JurisEscrowProxy__factory.bytecode);
   });
 
   it("checks upkeep", async () => {

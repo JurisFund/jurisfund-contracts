@@ -1,13 +1,13 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import chai from "chai";
 import { deployments, ethers } from "hardhat";
-import { JUSDC, JUSDC__factory, JusrisEscrow, JusrisEscrow__factory } from "../types";
+import { JUSDC, JUSDC__factory, JurisEscrow, JurisEscrow__factory } from "../types";
 import { Ship, advanceTimeAndBlock } from "../utils";
 
 const { expect } = chai;
 
 let ship: Ship;
-let escrowProxy: JusrisEscrow;
+let escrowProxy: JurisEscrow;
 let usdc: JUSDC;
 
 let deployer: SignerWithAddress; // also the diamond
@@ -56,7 +56,7 @@ describe("JurisEscrow implementation test", function () {
     depositor = scaffold.accounts.signer;
 
     usdc = await ship.connect(JUSDC__factory);
-    escrowProxy = await ship.connect(JusrisEscrow__factory);
+    escrowProxy = await ship.connect(JurisEscrow__factory);
 
     await usdc.connect(depositor).mint(settlement * 12n);
     await usdc.connect(depositor).approve(escrowProxy.target, settlement * 12n);
