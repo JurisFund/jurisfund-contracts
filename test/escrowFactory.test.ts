@@ -45,7 +45,7 @@ describe("JurisEscrow factory test", function () {
   const markup: bigint = 5_000_000n;
   const principal: bigint = 10_000n * 1_000_000n;
   const settlement: bigint = principal * 10n + markup;
-  const debt: bigint = 11_407_373_271n;
+  // const debt: bigint = 11_407_373_271n;
   // const settlement30: bigint = (30n * settlement) / 100n;
   // const debt3: bigint = (debt * 3n) / 100n;
   const apr: bigint = 27n;

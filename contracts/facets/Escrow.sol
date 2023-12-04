@@ -35,7 +35,7 @@ contract JurisEscrow {
   EscrowData internal escrowData;
 
   event EtherReceived(uint256 amount);
-  event EscrowInitialized(uint256 principal, address plantiff, address lawer, address token);
+  event EscrowInitialized(uint256 principal, address plaintiff, address lawer, address token);
   event EscrowSettled(uint256 settlement, uint256 jurisFundFee, uint256 timestamp);
 
   // no params in constructor for proxy
@@ -46,7 +46,7 @@ contract JurisEscrow {
   function initialize(
     uint256 principal,
     uint256 apr,
-    address plantiff,
+    address plaintiff,
     address lawer,
     address multisig,
     IERC20 token
@@ -58,8 +58,8 @@ contract JurisEscrow {
 
     m_escrowData.principal = principal;
     m_escrowData.jurisFundFeePercentage = uint112(apr);
-    m_escrowData.plantiff = plantiff;
-    m_escrowData.plantiffLawer = lawer;
+    m_escrowData.plaintiff = plaintiff;
+    m_escrowData.plaintiffLawer = lawer;
     m_escrowData.jurisFund = msg.sender; // the diamond proxy
     m_escrowData.settlementToken = token;
     m_escrowData.jurisFundSafe = multisig;
@@ -68,7 +68,7 @@ contract JurisEscrow {
 
     escrowData = m_escrowData;
 
-    emit EscrowInitialized(principal, plantiff, lawer, address(token));
+    emit EscrowInitialized(principal, plaintiff, lawer, address(token));
   }
 
   /// checks if settlement is ready to be disbursed
@@ -157,13 +157,13 @@ contract JurisEscrow {
     escrowData.isSettled = 1;
 
     /// --------------- order of settlement -----------------
-    /// plantiff's lawer -> pool -> safe -> plantiff
+    /// plaintiff's lawer -> pool -> safe -> plaintiff
     /// -----------------------------------------------------
 
-    settlementToken.safeTransfer(m_escrowData.plantiffLawer, lawerCut);
+    settlementToken.safeTransfer(m_escrowData.plaintiffLawer, lawerCut);
     settlementToken.safeTransfer(m_escrowData.jurisFund, netRepayment);
     settlementToken.safeTransfer(m_escrowData.jurisFundSafe, platformFee + MARKUP);
-    settlementToken.safeTransfer(m_escrowData.plantiff, netRembursement);
+    settlementToken.safeTransfer(m_escrowData.plaintiff, netRembursement);
 
     emit EscrowSettled(settlement, debt, block.timestamp);
   }

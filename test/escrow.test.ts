@@ -29,9 +29,6 @@ const setup = deployments.createFixture(async (hre) => {
 });
 
 describe("JurisEscrow implementation test", function () {
-  let key: string;
-  let timestamp: bigint;
-
   const markup: bigint = 5_000_000n;
   const principal: bigint = 10_000n * 1_000_000n;
   const settlement: bigint = principal * 10n + markup;
