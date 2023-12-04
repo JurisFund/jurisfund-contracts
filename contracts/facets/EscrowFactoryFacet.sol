@@ -88,6 +88,7 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
     }
 
     es._escrowSettled[address(proxy)] = false;
+    es._isEscrow[address(proxy)] = true;
     es._escrowProxies.push(address(proxy));
 
     emit EscrowCreated(proxy, implementation);

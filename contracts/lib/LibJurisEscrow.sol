@@ -8,6 +8,7 @@ library LibJurisEscrow {
     address _escrowImplementation;
     address[] _escrowProxies;
     mapping(address => bool) _escrowSettled;
+    mapping(address => bool) _isEscrow;
   }
 
   // keccak256(abi.encode(uint256(keccak256("juris.storage.escrow")) - 1)) & ~bytes32(uint256(0xff));

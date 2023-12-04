@@ -5,6 +5,7 @@ import {IERC20, EscrowData} from "../lib/Structs.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {UD60x18, ud, intoUint256} from "@prb/math/src/UD60x18.sol";
+import {IJurisPool} from "../interfaces/IJurisPool.sol";
 
 error NotInitialized();
 error AlreadyInitialized();
@@ -165,6 +166,10 @@ contract JurisEscrow {
     settlementToken.safeTransfer(m_escrowData.jurisFundSafe, platformFee + MARKUP);
     settlementToken.safeTransfer(m_escrowData.plaintiff, netRembursement);
 
+    if (isContract(m_escrowData.jurisFund)) {
+      IJurisPool(m_escrowData.jurisFund).updatePool(m_escrowData.principal, netRepayment);
+    }
+
     emit EscrowSettled(settlement, debt, block.timestamp);
   }
 
@@ -204,6 +209,21 @@ contract JurisEscrow {
   function _requiresCanBeSettled(uint256 balance, uint256 minimum, uint256 settled) internal pure {
     if (settled == 1) revert Exception(0xc1efc194);
     if (balance < minimum) revert NotEnoughFunds(balance, minimum);
+  }
+
+  function isContract(address _addr) internal view returns (bool) {
+    uint256 size;
+    // XXX Currently there is no better way to check if there is a contract in an address
+    // than to check the size of the code at that address.
+    // See https://ethereum.stackexchange.com/a/14016/36603
+    // for more details about how this works.
+    // TODO Check this again before the Serenity release, because all addresses will be
+    // contracts then.
+    // solium-disable-next-line security/no-inline-assembly
+    assembly {
+      size := extcodesize(_addr)
+    }
+    return size > 0;
   }
 
   modifier initialized() {
