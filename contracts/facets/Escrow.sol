@@ -34,6 +34,10 @@ contract JurisEscrow {
 
   EscrowData internal escrowData;
 
+  event EtherReceived(uint256 amount);
+  event EscrowInitialized(uint256 principal, address plantiff, address lawer, address token);
+  event EscrowSettled(uint256 settlement, uint256 jurisFundFee, uint256 timestamp);
+
   // no params in constructor for proxy
   constructor() {
     escrowData.isSettled = 0;
@@ -223,11 +227,7 @@ contract JurisEscrow {
     _;
   }
 
-  event EtherRecieved(uint256 amount);
-  event EscrowInitialized(uint256 principal, address plantiff, address lawer, address token);
-  event EscrowSettled(uint256 settlement, uint256 jurisFundFee, uint256 timestamp);
-
   receive() external payable {
-    emit EtherRecieved(msg.value);
+    emit EtherReceived(msg.value);
   }
 }

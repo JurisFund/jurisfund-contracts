@@ -1,30 +1,20 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import chai from "chai";
-import { Contract, ZeroAddress } from "ethers";
-import { deployments } from "hardhat";
-import {
-  IJurisEscrowProxy__factory,
-  JUSDC,
-  JUSDC__factory,
-  JurisEscrowFactoryFacet,
-  JurisEscrowFactoryFacet__factory,
-  JurisEscrow,
-  JurisEscrowProxy__factory,
-  JurisEscrow__factory,
-} from "../types";
+import { deployments, ethers } from "hardhat";
+import { JUSDC, JUSDC__factory, JurisEscrow, JurisEscrow__factory } from "../types";
 import { Ship, advanceTimeAndBlock } from "../utils";
 
 const { expect } = chai;
 
 let ship: Ship;
-let escrowFactory: JurisEscrowFactoryFacet;
-let escrowImpl: JurisEscrow;
+let escrowProxy: JurisEscrow;
 let usdc: JUSDC;
 
-let deployer: SignerWithAddress;
+let deployer: SignerWithAddress; // also the diamond
 let safe: SignerWithAddress;
-let plantiff: SignerWithAddress;
-let lawer: SignerWithAddress;
+let plaintiff: SignerWithAddress;
+let lawyer: SignerWithAddress;
+let depositor: SignerWithAddress; // settlement depositor
 
 const setup = deployments.createFixture(async (hre) => {
   ship = await Ship.init(hre);
@@ -38,7 +28,7 @@ const setup = deployments.createFixture(async (hre) => {
   };
 });
 
-describe("JurisEscrow factory test", function () {
+describe("JurisEscrow implementation test", function () {
   let key: string;
   let timestamp: bigint;
 
@@ -50,151 +40,190 @@ describe("JurisEscrow factory test", function () {
   const debt3: bigint = (debt * 3n) / 100n;
   const apr: bigint = 27n;
 
-  function getCalldata() {
-    return escrowImpl.interface.encodeFunctionData("initialize", [
-      principal,
-      apr,
-      plantiff.address,
-      lawer.address,
-      safe.address,
-      usdc.target,
-    ]);
-  }
+  const initEscrow = async () => {
+    await escrowProxy
+      .connect(deployer)
+      .initialize(principal, apr, plaintiff.address, lawyer.address, safe.address, usdc);
+  };
 
-  before(async () => {
+  beforeEach(async () => {
     const scaffold = await setup();
 
     deployer = scaffold.accounts.deployer;
     safe = scaffold.accounts.safe;
-    plantiff = scaffold.accounts.alice;
-    lawer = scaffold.accounts.bob;
+    plaintiff = scaffold.accounts.alice;
+    lawyer = scaffold.accounts.bob;
+    depositor = scaffold.accounts.signer;
 
-    escrowImpl = await ship.connect(JurisEscrow__factory);
     usdc = await ship.connect(JUSDC__factory);
-    const diamond = await ship.connect("JurisFund");
-    escrowFactory = JurisEscrowFactoryFacet__factory.connect(
-      (diamond as Contract).target as string,
-      deployer,
+    escrowProxy = await ship.connect(JurisEscrow__factory);
+
+    await usdc.connect(depositor).mint(settlement * 12n);
+    await usdc.connect(depositor).approve(escrowProxy.target, settlement * 12n);
+
+    await initEscrow();
+  });
+
+  it("cannot be re-initialized", async () => {
+    await expect(initEscrow()).to.be.revertedWithCustomError(escrowProxy, "AlreadyInitialized");
+  });
+
+  it("emitted an EscrowInitialized event after initialization", async () => {
+    await advanceTimeAndBlock(60);
+    const events = await escrowProxy.queryFilter(escrowProxy.filters.EscrowInitialized());
+    expect(events.length).to.equal(1);
+  });
+
+  it("rejects deposits below p * 10 limit", async () => {
+    await expect(escrowProxy.connect(depositor).deposit(markup)).to.be.revertedWithCustomError(
+      escrowProxy,
+      "NotEnoughFunds",
     );
-    await usdc.connect(deployer).mint(settlement * 12n);
   });
-  it("deploys escrow with initializer", async () => {
-    const tx = await escrowFactory.deployEscrow(
-      getCalldata(),
-      "0xef50095700000000000000000000000000000000000000000000000000000000",
+
+  it("accepts deposits above p * 10 limit", async () => {
+    await escrowProxy.connect(depositor).deposit(settlement);
+    expect(await escrowProxy.getBalance()).to.be.equal(settlement);
+  });
+
+  it("accepts deposits by normal transfer", async () => {
+    await usdc.connect(depositor).transfer(escrowProxy, markup);
+    expect(await escrowProxy.getBalance()).to.be.equal(markup);
+  });
+
+  it("emits an EtherReceived event on Ether transfer", async () => {
+    await expect(depositor.sendTransaction({ to: escrowProxy, value: ethers.parseEther("1") })).to.emit(
+      escrowProxy,
+      "EtherReceived",
     );
-
-    const receipt = await tx.wait();
-    const event = receipt?.logs
-      .map((log) => escrowFactory.interface.parseLog(log.toJSON()))
-      .find((item) => item?.name === "EscrowCreated");
-
-    const proxyAddress = event?.args[0];
-
-    expect(await ship.deployed(proxyAddress)).to.be.true;
-
-    expect(proxyAddress).to.not.equal(ZeroAddress);
-
-    const escrow = IJurisEscrowProxy__factory.connect(proxyAddress, deployer);
-
-    expect(await escrow.escrowAddress()).to.equal(escrowImpl.target);
   });
 
-  it("marks escrow unsettled after deployment", async () => {
-    const proxy = await escrowFactory.preCalculateEscrowAddress(
-      "0xef50095700000000000000000000000000000000000000000000000000000000",
+  it("can get current token balance", async () => {
+    expect(await escrowProxy.getBalance()).to.be.equal(0);
+  });
+
+  it("can retrieve escrow data", async () => {
+    const data = await escrowProxy.getEscrowData();
+    expect(data).to.be.deep.equal([
+      data[0], // timestamp
+      apr,
+      1n,
+      0n,
+      principal,
+      usdc.target,
+      plaintiff.address,
+      lawyer.address,
+      deployer.address,
+      safe.address,
+    ]);
+  });
+
+  it("returns ready status", async () => {
+    expect(await escrowProxy.ready()).to.be.false;
+    await escrowProxy.connect(depositor).deposit(settlement);
+    expect(await escrowProxy.ready()).to.be.true;
+  });
+
+  it("can be disbursed", async () => {
+    await usdc.connect(depositor).transfer(escrowProxy, settlement);
+    expect(await usdc.balanceOf(escrowProxy.target)).to.be.equal(settlement);
+    await advanceTimeAndBlock(3600 * 24 * 180); // 180 days
+    await escrowProxy.connect(deployer).disburse();
+    expect(await usdc.balanceOf(escrowProxy.target)).to.be.equal(0);
+    expect(await usdc.balanceOf(lawyer.address)).to.be.equal(settlement30);
+    expect(await usdc.balanceOf(deployer.address)).to.be.equal(debt - debt3);
+    expect(await usdc.balanceOf(safe.address)).to.be.equal(debt3 + markup);
+    expect(await usdc.balanceOf(plaintiff.address)).to.be.equal(settlement - debt - markup - settlement30);
+  });
+
+  it("cannot disburse if duration is not greater than 24hours", async () => {
+    await usdc.connect(depositor).transfer(escrowProxy, settlement);
+    expect(await usdc.balanceOf(escrowProxy.target)).to.be.equal(settlement);
+    await expect(escrowProxy.connect(deployer).disburse()).to.be.revertedWithCustomError(
+      escrowProxy,
+      "Exception",
     );
-    expect(proxy).to.not.equal(ZeroAddress);
-    expect(await ship.deployed(proxy)).to.be.true;
-    expect(await escrowFactory.isSettled(proxy)).to.be.false;
   });
 
-  it("pre-calculates escrow address", async () => {
-    const addr = await escrowFactory.preCalculateEscrowAddress(
-      "0xef50095743000000000000000000000000000000000000000000000000000000",
+  it("can be disbursed with externally calculated debt", async () => {
+    await usdc.connect(depositor).transfer(escrowProxy, settlement);
+    expect(await usdc.balanceOf(escrowProxy.target)).to.be.equal(settlement);
+    await escrowProxy.connect(safe).disburseWithOffChainAPR(debt);
+    expect(await usdc.balanceOf(escrowProxy.target)).to.be.equal(0);
+    expect(await usdc.balanceOf(lawyer.address)).to.be.equal(settlement30);
+    expect(await usdc.balanceOf(deployer.address)).to.be.equal(debt - debt3);
+    expect(await usdc.balanceOf(safe.address)).to.be.equal(debt3 + markup);
+    expect(await usdc.balanceOf(plaintiff.address)).to.be.equal(settlement - debt - markup - settlement30);
+  });
+
+  it("cannot disburse with externally calculated debt if not safe", async () => {
+    await expect(escrowProxy.connect(deployer).disburseWithOffChainAPR(debt)).to.be.revertedWithCustomError(
+      escrowProxy,
+      "UnAuthorized",
     );
+  });
 
-    expect(addr).to.not.equal(ZeroAddress);
-
-    expect(await ship.deployed(addr)).to.be.false;
-
-    const addr2 = await escrowFactory.preCalculateEscrowAddress(
-      "0xef50095700000000000000000000000000000000000000000000000000000000",
+  it("cannot be disbursed with externally calculated debt < Principal + Markup", async () => {
+    await expect(escrowProxy.connect(safe).disburseWithOffChainAPR(markup)).to.be.revertedWithCustomError(
+      escrowProxy,
+      "Exception",
     );
-
-    expect(addr2).to.not.equal(ZeroAddress);
-
-    expect(await ship.deployed(addr2)).to.be.true;
   });
 
-  it("returns escrow creation code", async () => {
-    const code = await escrowFactory.escrowCreationCode();
-
-    expect(code).to.equal(JurisEscrowProxy__factory.bytecode);
-  });
-
-  it("checks upkeep", async () => {
-    const upkeep = await escrowFactory.checkUpkeep("0x");
-
-    expect(upkeep[0]).to.equal(false);
-
-    await advanceTimeAndBlock(4 * 60 * 60);
-
-    const upkeep2 = await escrowFactory.checkUpkeep("0x");
-
-    expect(upkeep2[0]).to.equal(true);
-  });
-
-  it("updates upkeepInterval after interval", async () => {
-    const upkeep = await escrowFactory.checkUpkeep("0x");
-    expect(upkeep[0]).to.equal(true);
-
-    await escrowFactory.performUpkeep("0x");
-
-    const upkeep2 = await escrowFactory.checkUpkeep("0x");
-    expect(upkeep2[0]).to.equal(false);
-
-    await advanceTimeAndBlock(4 * 60 * 60);
-
-    const upkeep3 = await escrowFactory.checkUpkeep("0x");
-    expect(upkeep3[0]).to.equal(true);
-  });
-
-  it("performs upkeep", async () => {
-    const proxy = await escrowFactory.preCalculateEscrowAddress(
-      "0xef50095700000000000000000000000000000000000000000000000000000000",
+  it("reverts on disburse if min settlement amount not met", async () => {
+    await expect(escrowProxy.connect(safe).disburseWithOffChainAPR(debt)).to.be.revertedWithCustomError(
+      escrowProxy,
+      "NotEnoughFunds",
     );
-    expect(proxy).to.not.equal(ZeroAddress);
-    expect(await ship.deployed(proxy)).to.be.true;
-
-    const escrow = IJurisEscrowProxy__factory.connect(proxy, deployer);
-
-    await usdc.connect(deployer).approve(escrow.target, settlement);
-    await escrow.deposit(settlement);
-
-    expect(await escrow.ready()).to.be.true;
-    advanceTimeAndBlock(3600 * 24 * 180);
-
-    await escrowFactory.performUpkeep("0x");
-
-    expect(await escrow.ready()).to.be.false;
   });
 
-  it("emits EscrowCreated event on escrow creation", async () => {
-    await expect(
-      escrowFactory.deployEscrow(
-        getCalldata(),
-        "0xef80095700000000000000000000000000000000000000000000000000000000",
-      ),
-    ).to.emit(escrowFactory, "EscrowCreated");
-  });
-
-  it("marks escrow settled after upkeep", async () => {
-    const proxy = await escrowFactory.preCalculateEscrowAddress(
-      "0xef50095700000000000000000000000000000000000000000000000000000000",
+  it("reverts if already settled", async () => {
+    await usdc.connect(depositor).transfer(escrowProxy, settlement);
+    await escrowProxy.connect(safe).disburseWithOffChainAPR(debt);
+    await expect(escrowProxy.connect(deployer).disburse()).to.be.revertedWithCustomError(
+      escrowProxy,
+      "Exception",
     );
-    expect(proxy).to.not.equal(ZeroAddress);
-    expect(await ship.deployed(proxy)).to.be.true;
-    expect(await escrowFactory.isSettled(proxy)).to.be.true;
+  });
+
+  it("cannot disburse if not diamond or safe", async () => {
+    await expect(escrowProxy.connect(lawyer).disburse()).to.be.revertedWithCustomError(
+      escrowProxy,
+      "UnAuthorized",
+    );
+  });
+
+  it("emits an EscrowSettled event after disbursement", async () => {
+    await usdc.connect(depositor).transfer(escrowProxy, settlement);
+    await expect(escrowProxy.connect(safe).disburseWithOffChainAPR(debt)).to.emit(
+      escrowProxy,
+      "EscrowSettled",
+    );
+  });
+
+  it("allows safe to withdraw locked funds after settlement", async () => {
+    await usdc.connect(depositor).transfer(escrowProxy, settlement);
+    await escrowProxy.connect(safe).disburseWithOffChainAPR(debt);
+    await usdc.connect(depositor).transfer(escrowProxy, markup);
+    expect(await usdc.balanceOf(escrowProxy.target)).to.be.equal(markup);
+    await escrowProxy.connect(safe).withdraw(usdc);
+    expect(await usdc.balanceOf(escrowProxy.target)).to.be.equal(0);
+  });
+
+  it("reverts if safe withdraws funds before settlement", async () => {
+    await usdc.connect(depositor).transfer(escrowProxy, 5_000_000n);
+    await expect(escrowProxy.connect(safe).withdraw(usdc)).to.be.revertedWithCustomError(
+      escrowProxy,
+      "Exception",
+    );
+  });
+
+  it("allows only safe to withdraw funds", async () => {
+    await usdc.connect(depositor).transfer(escrowProxy, settlement);
+    await escrowProxy.connect(safe).disburseWithOffChainAPR(debt);
+    await expect(escrowProxy.connect(deployer).withdraw(usdc)).to.be.revertedWithCustomError(
+      escrowProxy,
+      "UnAuthorized",
+    );
   });
 });
