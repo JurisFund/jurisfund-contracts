@@ -13,6 +13,10 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGuardUpgradeable {
   event EscrowCreated(JurisEscrowProxy indexed proxy, address implementation);
 
+  function isSettled(IJurisEscrowProxy proxy) external view returns (bool) {
+    return LibJurisEscrow._getEscrowStorage()._escrowSettled[address(proxy)];
+  }
+
   function checkUpkeep(
     bytes calldata /* checkData */
   ) external view override returns (bool upkeepNeeded, bytes memory performData) {
@@ -71,7 +75,7 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
     /// @solidity memory-safe-assembly
     assembly {
       let size := extcodesize(implementation)
-      if not(gt(size, 0)) {
+      if lt(size, 2) {
         revert(0, 0)
       }
       proxy := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
@@ -84,6 +88,7 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
     }
 
     es._escrowSettled[address(proxy)] = false;
+    es._isEscrow[address(proxy)] = true;
     es._escrowProxies.push(address(proxy));
 
     emit EscrowCreated(proxy, implementation);

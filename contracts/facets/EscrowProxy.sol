@@ -5,7 +5,7 @@ error InvalidImplementationAddress();
 
 /// adapted from https://github.com/safe-global/safe-contracts/blob/main/contracts/proxies/SafeProxy.sol
 contract JurisEscrowProxy {
-  address internal immutable _IMPLEMENTATION_SLOT;
+  address internal _IMPLEMENTATION_SLOT;
 
   constructor(address _implementation) {
     if (_implementation == address(0)) {

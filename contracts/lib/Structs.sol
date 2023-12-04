@@ -18,8 +18,8 @@ struct EscrowData {
   uint8 isSettled; // 0 or 1
   uint256 principal; // initial loan amount USD
   IERC20 settlementToken; // JUSDC loan token
-  address plantiff; // address of plantiff for injury case
-  address plantiffLawer; // address of plantiff lawyer
+  address plaintiff; // address of plaintiff for injury case
+  address plaintiffLawer; // address of plaintiff lawyer
   address jurisFund; // address of Juris Diamond
   address jurisFundSafe; // address of juris safe multisig
 }

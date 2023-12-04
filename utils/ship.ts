@@ -61,6 +61,16 @@ class Ship {
     return this.hre.ethers.provider;
   }
 
+  address = async <T extends ContractFactory>(contractFactory: new () => T) => {
+    const contractName = contractFactory.name.split("__")[0];
+    const dep = await this.hre.deployments.getOrNull(contractName);
+    return dep?.address;
+  };
+
+  deployed = async (address: string) => {
+    return await this.hre.ethers.provider.getCode(address).then((code) => code.length > 2);
+  };
+
   deploy = async <T extends ContractFactory>(
     contractFactory: new () => T,
     option?: Modify<

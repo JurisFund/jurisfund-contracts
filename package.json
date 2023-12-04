@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "repository": "https://github.com/JurisFund/jurisfund-contracts.git",
-  "author": "Joseph <devanderson0412@gmail.com>",
+  "author": "Joseph <devanderson0412@gmail.com>, peter <anyaogupeter601@gmail.com>",
   "license": "MIT",
   "scripts": {
     "compile": "hardhat compile",

@@ -31,6 +31,7 @@ contract InitFacet is UsingDiamondOwner, Initializable {
   ) external onlyOwner initializer {
     es()._upkeepInterval = 2600; // an hour
     es()._escrowImplementation = _escrowImplementation;
+    es()._lastUpkeep = block.timestamp;
 
     ps()._token = _token;
     ps()._fullPeriod = _fullPeriod;
