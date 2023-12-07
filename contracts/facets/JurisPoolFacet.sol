@@ -8,27 +8,6 @@ import {UsingDiamondOwner} from "hardhat-deploy/solc_0.8/diamond/UsingDiamondOwn
 import {IJurisPool} from "../interfaces/IJurisPool.sol";
 
 contract JurisPoolFacet is IJurisPool, ReentrancyGuardUpgradeable, UsingDiamondOwner {
-  event Staked(
-    bytes32 indexed key,
-    address indexed owner,
-    uint256 amount,
-    uint256 unlockTime,
-    uint256 liquidity
-  );
-  event Withdrawal(
-    bytes32 indexed key,
-    address indexed owner,
-    uint256 amount,
-    uint256 rewardAmount
-  );
-  event RateUpdated(uint256 liquidity, uint256 stakeAmount);
-
-  error UnAuthorized();
-  error InvalidStakeAmount();
-  error Forbidden(address owner);
-  error AlreadyWithdrawn();
-  error Locked(uint256 unlockTime);
-
   function stake(bool _useHalfStake, uint256 _amount) external nonReentrant {
     LibJuris.PoolStorage storage ps = LibJuris._getPoolStorage();
     if (_amount < ps._minStakeAmount) {

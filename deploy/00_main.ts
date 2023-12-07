@@ -12,6 +12,8 @@ import {
 const func: DeployFunction = async (hre) => {
   const { deploy, deployDiamond, accounts } = await Ship.init(hre);
 
+  console.log("using " + accounts["safe"].address + " as Safe");
+
   const jusdc = await deploy(JUSDC__factory);
 
   const escrowImplementation = await deploy(JurisEscrow__factory);

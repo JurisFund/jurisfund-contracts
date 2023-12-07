@@ -1,29 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20, EscrowData} from "../lib/Structs.sol";
+import {IERC20, EscrowData, IJurisEscrow} from "../interfaces/IJurisEscrow.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {UD60x18, ud, intoUint256} from "@prb/math/src/UD60x18.sol";
 import {IJurisPool} from "../interfaces/IJurisPool.sol";
 
-error NotInitialized();
-error AlreadyInitialized();
-error UnAuthorized();
-error NotEnoughFunds(uint256 actual, uint256 expected);
-
-/// ------------------ Error Codes --------------------
-/// first 4 bytes of keccak256(bytes("error message"))
-/// ---------------------------------------------------
-/// ES1001 - Debt amount is too low (0xbd070be3)
-/// ES1515 - Minimum duration not reached (0xdb17e5b1)
-/// ES5001 - Escrow must be settled (0x124771cb)
-/// ES5011 - Escrow is already settled (0xc1efc194)
-/// ES4004 - Withdrawal failed (0xee910bd2)
-/// ---------------------------------------------------
-error Exception(uint256 errorCode);
-
-contract JurisEscrow {
+contract JurisEscrow is IJurisEscrow {
   // required for proxy storage
   address internal _IMPLEMENTATION_SLOT;
 
@@ -35,16 +19,6 @@ contract JurisEscrow {
 
   EscrowData internal escrowData;
 
-  event EtherReceived(uint256 amount);
-  event EscrowInitialized(
-    uint256 principal,
-    address indexed plaintiff,
-    address lawer,
-    address token
-  );
-  event EscrowSettled(uint256 settlement, uint256 jurisFundFee, uint256 timestamp);
-
-  // no params in constructor for proxy
   constructor() {
     escrowData.isSettled = 0;
   }
@@ -218,13 +192,6 @@ contract JurisEscrow {
 
   function isContract(address _addr) internal view returns (bool) {
     uint256 size;
-    // XXX Currently there is no better way to check if there is a contract in an address
-    // than to check the size of the code at that address.
-    // See https://ethereum.stackexchange.com/a/14016/36603
-    // for more details about how this works.
-    // TODO Check this again before the Serenity release, because all addresses will be
-    // contracts then.
-    // solium-disable-next-line security/no-inline-assembly
     assembly {
       size := extcodesize(_addr)
     }

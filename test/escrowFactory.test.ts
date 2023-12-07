@@ -127,12 +127,6 @@ describe("JurisEscrow factory test", function () {
     expect(await ship.deployed(addr2)).to.be.true;
   });
 
-  it("returns escrow creation code", async () => {
-    const code = await escrowFactory.escrowCreationCode();
-
-    expect(code).to.equal(JurisEscrowProxy__factory.bytecode);
-  });
-
   it("checks upkeep", async () => {
     const upkeep = await escrowFactory.checkUpkeep("0x");
 

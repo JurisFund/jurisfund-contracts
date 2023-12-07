@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {JurisEscrowProxy} from "./EscrowProxy.sol";
-import {IJurisEscrowProxy} from "../interfaces/IJurisEscrowProxy.sol";
+import {JurisEscrowProxy, IJurisEscrowProxy, IJurisEscrowFactory} from "../interfaces/IJurisEscrowFactory.sol";
 import {LibJuris} from "../lib/LibJuris.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
@@ -10,9 +9,11 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 /// adapted from:
 /// - openzeppelin Creat2 lib
 /// - safe-protocol proxy Factory
-contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGuardUpgradeable {
-  event EscrowCreated(JurisEscrowProxy indexed proxy, address implementation);
-
+contract JurisEscrowFactoryFacet is
+  IJurisEscrowFactory,
+  AutomationCompatibleInterface,
+  ReentrancyGuardUpgradeable
+{
   function isSettled(IJurisEscrowProxy proxy) external view returns (bool) {
     return LibJuris._getEscrowStorage()._escrowSettled[address(proxy)];
   }
@@ -38,14 +39,10 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
     }
   }
 
-  function escrowCreationCode() public pure returns (bytes memory) {
-    return type(JurisEscrowProxy).creationCode;
-  }
-
-  function preCalculateEscrowAddress(bytes32 salt) public view returns (address addr) {
+  function preCalculateEscrowAddress(bytes32 salt) external view returns (address addr) {
     bytes32 bytecodeHash = keccak256(
       abi.encodePacked(
-        type(JurisEscrowProxy).creationCode,
+        _escrowCreationCode(),
         uint256(uint160(LibJuris._getEscrowStorage()._escrowImplementation))
       )
     );
@@ -68,7 +65,7 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
     LibJuris.EscrowStorage storage es = LibJuris._getEscrowStorage();
     address implementation = es._escrowImplementation;
     bytes memory deploymentData = abi.encodePacked(
-      type(JurisEscrowProxy).creationCode,
+      _escrowCreationCode(),
       uint256(uint160(implementation))
     );
     /* solhint-disable no-inline-assembly */
@@ -92,6 +89,10 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
     es._escrowProxies.push(address(proxy));
 
     emit EscrowCreated(proxy, implementation);
+  }
+
+  function _escrowCreationCode() internal pure returns (bytes memory) {
+    return type(JurisEscrowProxy).creationCode;
   }
 
   function _trySettle(address proxy) internal returns (uint256) {
