@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {JurisEscrowProxy} from "./EscrowProxy.sol";
 import {IJurisEscrowProxy} from "../interfaces/IJurisEscrowProxy.sol";
-import {LibJurisEscrow} from "../lib/LibJurisEscrow.sol";
+import {LibJuris} from "../lib/LibJuris.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
@@ -14,19 +14,19 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
   event EscrowCreated(JurisEscrowProxy indexed proxy, address implementation);
 
   function isSettled(IJurisEscrowProxy proxy) external view returns (bool) {
-    return LibJurisEscrow._getEscrowStorage()._escrowSettled[address(proxy)];
+    return LibJuris._getEscrowStorage()._escrowSettled[address(proxy)];
   }
 
   function checkUpkeep(
     bytes calldata /* checkData */
   ) external view override returns (bool upkeepNeeded, bytes memory performData) {
-    LibJurisEscrow.EscrowStorage storage es = LibJurisEscrow._getEscrowStorage();
+    LibJuris.EscrowStorage storage es = LibJuris._getEscrowStorage();
     upkeepNeeded = (block.timestamp - es._lastUpkeep) > es._upkeepInterval;
     performData = new bytes(0);
   }
 
   function performUpkeep(bytes calldata /* performData */) external override nonReentrant {
-    LibJurisEscrow.EscrowStorage storage es = LibJurisEscrow._getEscrowStorage();
+    LibJuris.EscrowStorage storage es = LibJuris._getEscrowStorage();
     if ((block.timestamp - es._lastUpkeep) > es._upkeepInterval) {
       es._lastUpkeep = block.timestamp;
     }
@@ -46,7 +46,7 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
     bytes32 bytecodeHash = keccak256(
       abi.encodePacked(
         type(JurisEscrowProxy).creationCode,
-        uint256(uint160(LibJurisEscrow._getEscrowStorage()._escrowImplementation))
+        uint256(uint160(LibJuris._getEscrowStorage()._escrowImplementation))
       )
     );
 
@@ -65,7 +65,7 @@ contract JurisEscrowFactoryFacet is AutomationCompatibleInterface, ReentrancyGua
     bytes memory initializer,
     bytes32 salt
   ) external nonReentrant returns (JurisEscrowProxy proxy) {
-    LibJurisEscrow.EscrowStorage storage es = LibJurisEscrow._getEscrowStorage();
+    LibJuris.EscrowStorage storage es = LibJuris._getEscrowStorage();
     address implementation = es._escrowImplementation;
     bytes memory deploymentData = abi.encodePacked(
       type(JurisEscrowProxy).creationCode,

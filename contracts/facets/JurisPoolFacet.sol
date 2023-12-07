@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {LibJuris, StakeData} from "../lib/LibJuris.sol";
-import {LibJurisEscrow} from "../lib/LibJurisEscrow.sol";
 import {UsingDiamondOwner} from "hardhat-deploy/solc_0.8/diamond/UsingDiamondOwner.sol";
 import {IJurisPool} from "../interfaces/IJurisPool.sol";
 
@@ -80,7 +79,7 @@ contract JurisPoolFacet is IJurisPool, ReentrancyGuardUpgradeable, UsingDiamondO
   function updatePool(uint256 _principal, uint256 _netRepayment) external {
     require(_netRepayment >= _principal, "JurisPool: invalid repayment amount");
     LibJuris.PoolStorage storage ps = LibJuris._getPoolStorage();
-    LibJurisEscrow.EscrowStorage storage es = LibJurisEscrow._getEscrowStorage();
+    LibJuris.EscrowStorage storage es = LibJuris._getEscrowStorage();
 
     if (!es._isEscrow[msg.sender]) {
       revert UnAuthorized();
