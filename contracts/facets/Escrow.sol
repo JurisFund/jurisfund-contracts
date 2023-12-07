@@ -36,7 +36,12 @@ contract JurisEscrow {
   EscrowData internal escrowData;
 
   event EtherReceived(uint256 amount);
-  event EscrowInitialized(uint256 principal, address plaintiff, address lawer, address token);
+  event EscrowInitialized(
+    uint256 principal,
+    address indexed plaintiff,
+    address lawer,
+    address token
+  );
   event EscrowSettled(uint256 settlement, uint256 jurisFundFee, uint256 timestamp);
 
   // no params in constructor for proxy
