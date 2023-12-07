@@ -52,12 +52,42 @@ const config: HardhatUserConfig = {
       accounts: accounts("sepolia"),
       tags: ["test", "live"],
     },
+    avalanche: {
+      url: node_url("avalanche"),
+      accounts: accounts("avalanche"),
+      tags: ["test", "live"],
+    },
+    fuji: {
+      url: node_url("fuji"),
+      accounts: accounts("fuji"),
+      tags: ["test", "live"],
+    },
   },
   etherscan: {
     apiKey: {
       mainnet: verifyKey("etherscan"),
       sepolia: verifyKey("etherscan"),
+      avalanche: "snowtrace_avalanche",
+      fuji: "snowtrace_fuji",
     },
+    customChains: [
+      {
+        network: "fuji",
+        chainId: 43113,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/testnet/evm/43113/etherscan",
+          browserURL: "https://avalanche.testnet.routescan.io",
+        },
+      },
+      {
+        network: "avalanche",
+        chainId: 43114,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan",
+          browserURL: "https://avalanche.routescan.io",
+        },
+      },
+    ],
   },
   solidity: {
     compilers: [
@@ -80,9 +110,9 @@ const config: HardhatUserConfig = {
   namedAccounts: {
     deployer: 0,
     signer: 1,
-    alice: 2,
-    bob: 3,
-    safe: 4,
+    safe: 2,
+    alice: 3,
+    bob: 4,
   },
   abiExporter: {
     path: "./abis",

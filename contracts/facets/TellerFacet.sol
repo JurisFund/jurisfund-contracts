@@ -1,20 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import {IERC20, IJurisTeller} from "../interfaces/IJurisTeller.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {LibJuris} from "../lib/LibJuris.sol";
 import {UsingDiamondOwner} from "hardhat-deploy/solc_0.8/diamond/UsingDiamondOwner.sol";
 
-error UnAuthorized();
-error MaxSingleWithdrawalExceeded();
-error WithdrawalDelayNotReached();
-
-contract JurisTellerFacet {
+contract JurisTellerFacet is IJurisTeller {
   using SafeERC20 for IERC20;
-
-  event Dispensed(address indexed plaintiff, uint256 indexed amount);
-  event TellerConfigUpdated(uint256 delay, uint256 maxSingleWithdrawal);
 
   function dispense(IERC20 token, address plaintiff, uint256 amount) external {
     LibJuris.TellerStorage memory ts = LibJuris._getTellerStorage();
